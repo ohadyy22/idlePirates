@@ -1,42 +1,44 @@
 package com.game7d.idlepirates.entities;
 
 import com.badlogic.gdx.math.Vector2;
-import com.game7d.idlepirates.data.ResurceType;
+import com.game7d.idlepirates.data.ResourceType;
+import com.game7d.idlepirates.workshop.FractionalAccumulator;
+
 import java.util.EnumMap;
 
 public class Wreck {
-    public Vector2 position;
-    public EnumMap<ResurceType,Float>   resourseRates;
-    public EnumMap<ResurceType,Integer> generated;
-    public EnumMap<ResurceType,Float>   fractionalBuffer;
 
-    public Wreck(Vector2 pos, EnumMap<ResurceType,Float> rates)
-    {
-     this.position         = pos;
-     this.resourseRates    = rates;
-     this.generated        = new EnumMap<>(ResurceType.class);
-     this.fractionalBuffer = new EnumMap<>(ResurceType.class);
-     for(ResurceType rt : rates.keySet())
-     {
-        generated.put(rt,0);
-        fractionalBuffer.put(rt,0f);
-     }
+    public final Vector2 position;
+
+    public final EnumMap<ResourceType, Float> productionRates =
+        new EnumMap<>(ResourceType.class);
+
+    public final EnumMap<ResourceType, Integer> stored =
+        new EnumMap<>(ResourceType.class);
+
+    private final EnumMap<ResourceType, FractionalAccumulator> accumulators =
+        new EnumMap<>(ResourceType.class);
+
+    public Wreck(Vector2 position) {
+        this.position = position;
     }
 
-    public void update(float delta)
-    {
-        for(ResurceType rt : resourseRates.keySet())
-        {
-            float produce = resourseRates.get(rt) * delta;
-            float newBuffer = fractionalBuffer.get(rt) + produce;
-            int wholeUnits = (int)newBuffer;
-            if(wholeUnits>0)
-            {
-                generated.put(rt,generated.get(rt)+wholeUnits);
+    public void addResource(ResourceType type, float ratePerSecond) {
+        productionRates.put(type, ratePerSecond);
+        stored.put(type, 0);
+        accumulators.put(type, new FractionalAccumulator());
+    }
+
+    public void update(float delta) {
+        for (ResourceType type : productionRates.keySet()) {
+            int produced = accumulators
+                .get(type)
+                .add(productionRates.get(type), delta);
+            if (produced > 0) {
+                stored.put(type, stored.get(type) + produced);
             }
-            fractionalBuffer.put(rt,newBuffer - wholeUnits);
         }
-        return;
     }
-
 }
+
+
