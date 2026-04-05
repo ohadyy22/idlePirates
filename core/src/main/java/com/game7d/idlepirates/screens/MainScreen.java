@@ -1,7 +1,9 @@
 package com.game7d.idlepirates.screens;
 
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -10,8 +12,20 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.game7d.idlepirates.data.CraftedItem;
+import com.game7d.idlepirates.data.ResourceType;
+import com.game7d.idlepirates.market.MarketSystem;
+import com.game7d.idlepirates.progress.ResourceDiscovery;
+import com.game7d.idlepirates.ui.MarketPanel;
+
+import java.util.EnumMap;
 
 public class MainScreen implements Screen {
 
@@ -53,6 +67,24 @@ public class MainScreen implements Screen {
 
     // זמני בדיקה – בהמשך יבוא מ‑MainShip
     private float visionRange = 200f;
+
+    // --- UI ---
+    private Stage uiStage;
+    private Skin skin;
+
+    // --- Market ---
+    private MarketSystem marketSystem;
+    private MarketPanel marketPanel;
+    private Label goldLabel;
+
+    // ===== ECONOMY =====
+    private EnumMap<ResourceType, Integer> resourceBank;
+    private EnumMap<CraftedItem, Integer> craftedInventory;
+    private ResourceDiscovery resourceDiscovery;
+
+
+
+
 
     @Override
     public void show() {
@@ -144,6 +176,70 @@ public class MainScreen implements Screen {
 
         cloud = new Sprite(cloudTex);
         cloud.setOriginCenter();
+
+
+        // ========= UI STAGE =========
+        uiStage = new Stage(new FitViewport(1080, 1920));
+        FileHandle fh = Gdx.files.internal("ui\\uiskin.json");
+        Gdx.app.log("ASSET", "uiskin.json exists = " + fh.exists());
+
+
+
+
+        skin = new Skin(Gdx.files.internal("ui\\uiskin.json"));
+
+        // ========= ECONOMY BASE =========
+        resourceBank = new EnumMap<>(ResourceType.class);
+        craftedInventory = new EnumMap<>(CraftedItem.class);
+        resourceDiscovery = new ResourceDiscovery();
+
+
+
+// ========= ECONOMY =========
+        resourceDiscovery.discover(ResourceType.WOOD); // הספינה החינמית
+        marketSystem = new MarketSystem(
+            resourceBank,
+            craftedInventory,
+            resourceDiscovery
+        );
+
+// ========= TOP BAR =========
+        Table topBar = new Table();
+        topBar.setFillParent(true);
+        topBar.top().pad(10);
+
+        TextButton marketButton = new TextButton("Market", skin);
+        goldLabel = new Label("Gold: 0", skin);
+
+        marketButton.addListener(e -> {
+            if (marketButton.isPressed()) {
+                marketPanel.refresh();
+                marketPanel.setVisible(!marketPanel.isVisible());
+            }
+            return true;
+        });
+
+        topBar.add(marketButton).left().padRight(10);
+        topBar.add(goldLabel).left();
+
+        uiStage.addActor(topBar);
+
+// ========= MARKET PANEL =========
+        marketPanel = new MarketPanel(marketSystem, skin);
+        marketPanel.setVisible(false);
+        marketPanel.setSize(860, 1200);
+        marketPanel.setPosition(110, 300);
+
+        uiStage.addActor(marketPanel);
+
+// ========= INPUT =========
+        InputMultiplexer mux = new InputMultiplexer();
+        mux.addProcessor(uiStage);
+        Gdx.input.setInputProcessor(mux);
+
+
+
+
     }
 
     @Override
@@ -174,11 +270,18 @@ public class MainScreen implements Screen {
         drawWreck();
 
         // =========================
-        // CLOUD – תמיד אחרון
+        // CLOUD –– תמיד אחרון
         // =========================
         drawCloud();
-
         batch.end();
+
+        // =========================
+        // UI
+        // =========================
+        goldLabel.setText("Gold: " + marketSystem.getGold());
+        uiStage.act(delta);
+        uiStage.draw();
+
     }
 
     private void drawMainShip() {
@@ -253,10 +356,15 @@ public class MainScreen implements Screen {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height);
+        // עדכון viewport של ה-UI
+        uiStage.getViewport().update(width, height, true);
     }
 
     @Override public void pause() {}
-    @Override public void resume() {}
+    @Override public void resume() {
+
+
+    }
     @Override public void hide() {}
 
     @Override
@@ -266,6 +374,8 @@ public class MainScreen implements Screen {
         mainShip.getTexture().dispose();
         wreck.getTexture().dispose();
         cloud.getTexture().dispose();
+        uiStage.dispose();
+        skin.dispose();
     }
 }
 
