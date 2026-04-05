@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.game7d.idlepirates.data.WreckDefinition;
 import com.game7d.idlepirates.entities.*;
 import com.game7d.idlepirates.systems.*;
+import com.game7d.idlepirates.upgrades.UpgradeSystem;
 
 import java.util.ArrayList;
 import java.util.List;

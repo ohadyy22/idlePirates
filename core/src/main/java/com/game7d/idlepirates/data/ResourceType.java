@@ -1,11 +1,21 @@
 package com.game7d.idlepirates.data;
 
 public enum ResourceType {
-    WOOD_RAW,
-    ROPE_RAW,
-    METAL_RAW,
 
-    WOOD_REFINED,
-    ROPE_REFINED,
-    METAL_REFINED,
+    // === משאבים בסיסיים (Early Game) ===
+    WOOD,
+    ROPE,
+    IRON,
+
+    // === משאבים שייפתחו מספינות מתקדמות ===
+    SAND,
+    COAL,
+    SULFUR,
+
+    // === אזורים מתקדמים / ביומים ===
+    CORAL,
+    BONE,
+    TAR
 }
+
+
