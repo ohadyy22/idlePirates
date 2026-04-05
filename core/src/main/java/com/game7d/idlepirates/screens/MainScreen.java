@@ -13,35 +13,38 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-import com.game7d.idlepirates.render.MainShipRenderer;
-
 public class MainScreen implements Screen {
 
     // =========================
-    // WORLD / VIEW CONFIG
+    // WORLD / VIEW
     // =========================
     private static final float WORLD_SIZE = 4096f;
     private static final float VIEWPORT_WIDTH  = 1080f;
     private static final float VIEWPORT_HEIGHT = 1920f;
 
-    // Vision baseline (לסקייל ענן)
+    // Vision baseline for cloud scaling
     private static final float BASE_VISION = 200f;
 
     // =========================
-    // RENDERING
+    // CAMERA / BATCH
     // =========================
     private OrthographicCamera camera;
     private Viewport viewport;
     private SpriteBatch batch;
 
     // =========================
-    // WORLD SPRITES
+    // SPRITES
     // =========================
     private Sprite background;
     private Sprite cloud;
 
-    private MainShipRenderer mainShip;
-    private Vector2 mainShipPosition;
+    // Main ship (Hero) – אנכית
+    private Sprite mainShip;
+    private Vector2 mainShipPos;
+
+    // Wreck – מאוזנת (רחבה)
+    private Sprite wreck;
+    private Vector2 wreckPos;
 
     // =========================
     // STATE
@@ -60,7 +63,6 @@ public class MainScreen implements Screen {
         viewport = new FitViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
         viewport.apply();
 
-        // מרכז מצלמה לעולם
         camera.position.set(WORLD_SIZE / 2f, WORLD_SIZE / 2f, 0f);
         camera.update();
 
@@ -75,10 +77,56 @@ public class MainScreen implements Screen {
         background.setPosition(0, 0);
 
         // =========================
-        // MAIN SHIP
+        // MAIN SHIP (Hero) – אנכית
         // =========================
-        mainShipPosition = new Vector2(WORLD_SIZE / 2f, WORLD_SIZE / 2f);
-        mainShip = new MainShipRenderer("main_ship.png");
+        Texture mainTex = new Texture(
+            Gdx.files.internal("main_ship.png"),
+            Pixmap.Format.RGBA8888,
+            true
+        );
+        mainTex.setFilter(
+            Texture.TextureFilter.MipMapLinearLinear,
+            Texture.TextureFilter.Linear
+        );
+
+        mainShip = new Sprite(mainTex);
+
+        // ✅ Hero גדול ובולט – אנכי יותר
+        final float MAIN_W = 180f;
+        final float MAIN_H = 260f;
+
+        mainShip.setSize(MAIN_W, MAIN_H);
+        mainShip.setOrigin(MAIN_W / 2f, MAIN_H * 0.35f);
+
+        mainShipPos = new Vector2(WORLD_SIZE / 2f, WORLD_SIZE / 2f);
+
+        // =========================
+        // WRECK – מאוזנת (רחבה)
+        // =========================
+        Texture wreckTex = new Texture(
+            Gdx.files.internal("wreck.png"),
+            Pixmap.Format.RGBA8888,
+            true
+        );
+        wreckTex.setFilter(
+            Texture.TextureFilter.MipMapLinearLinear,
+            Texture.TextureFilter.Linear
+        );
+
+        wreck = new Sprite(wreckTex);
+
+        // ✅ קטן וברור מה-Hero
+        final float WRECK_W = 96f;
+        final float WRECK_H = 60f;
+
+        wreck.setSize(WRECK_W, WRECK_H);
+        wreck.setOrigin(WRECK_W / 2f, WRECK_H * 0.4f);
+
+        // ליד הספינה הראשית – מעט ימינה ולמטה
+        wreckPos = new Vector2(
+            mainShipPos.x + 260f,
+            mainShipPos.y - 120f
+        );
 
         // =========================
         // CLOUD (Fog of War)
@@ -86,7 +134,7 @@ public class MainScreen implements Screen {
         Texture cloudTex = new Texture(
             Gdx.files.internal("cloud.png"),
             Pixmap.Format.RGBA8888,
-            true // mipmaps חשובים מאוד
+            true
         );
 
         cloudTex.setFilter(
@@ -102,58 +150,105 @@ public class MainScreen implements Screen {
     public void render(float delta) {
         time += delta;
 
-        // ניקוי מסך
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Camera
         camera.update();
         batch.setProjectionMatrix(camera.combined);
 
         batch.begin();
 
         // =========================
-        // DRAW WORLD
+        // WORLD
         // =========================
         background.draw(batch);
 
         // =========================
-        // DRAW MAIN SHIP
+        // MAIN SHIP (Hero)
         // =========================
-        mainShip.setPosition(mainShipPosition);
-        mainShip.render(batch, time);
+        drawMainShip();
 
         // =========================
-        // DRAW CLOUD (LAST)
+        // WRECK
+        // =========================
+        drawWreck();
+
+        // =========================
+        // CLOUD – תמיד אחרון
         // =========================
         drawCloud();
 
         batch.end();
     }
 
+    private void drawMainShip() {
+        float bob = MathUtils.sin(time * 1.0f) * 2.8f;
+        float rotation = MathUtils.sin(time * 0.6f) * 2.0f;
+        float pulse = 1f + MathUtils.sin(time * 0.8f) * 0.015f;
+
+        float x = mainShipPos.x - mainShip.getWidth() / 2f;
+        float y = mainShipPos.y - mainShip.getHeight() / 2f;
+
+        mainShip.setPosition(x, y + bob);
+        mainShip.setRotation(rotation);
+        mainShip.setScale(pulse);
+
+        mainShip.draw(batch);
+
+        mainShip.setRotation(0f);
+        mainShip.setScale(1f);
+        mainShip.setPosition(x, y);
+    }
+
+    private void drawWreck() {
+        float bob = MathUtils.sin(time * 0.8f) * 1.3f;
+        float rotation = MathUtils.sin(time * 0.4f) * 0.9f;
+
+        float x = wreckPos.x - wreck.getWidth() / 2f;
+        float y = wreckPos.y - wreck.getHeight() / 2f - 10f;
+
+        wreck.setPosition(x, y + bob);
+        wreck.setRotation(rotation);
+
+        wreck.draw(batch);
+
+        wreck.setRotation(0f);
+        wreck.setPosition(x, y);
+    }
+
     private void drawCloud() {
 
-        // בסיס סקייל לפי Vision
+        // מרכז המסך בעולם (ולא הספינה ישירות)
+        float focusX = camera.position.x;
+        float focusY = camera.position.y;
+
         float baseScale = visionRange / BASE_VISION;
 
-        // Pulse עדין (נשימה)
-        float pulse = MathUtils.sin(time * 0.35f) * 0.01f;
+        // אנימציות עדינות
+        float pulse = MathUtils.sin(time * 0.35f) * 0.015f;
+        float driftX = MathUtils.sin(time * 0.18f) * 4f;
+        float driftY = MathUtils.cos(time * 0.14f) * 3f;
+        float rotation = MathUtils.sin(time * 0.10f) * 0.4f;
 
-        // Drift קטן (ערפל זז)
-        float driftX = MathUtils.sin(time * 0.15f) * 4f;
-        float driftY = MathUtils.cos(time * 0.12f) * 3f;
+        // אליפסה אנכית (מותאם למובייל)
+        float scaleX = baseScale * 0.9f * (1f + pulse);
+        float scaleY = baseScale * 1.3f * (1f + pulse);
 
-        float finalScale = baseScale * (1f + pulse);
-
-        cloud.setScale(finalScale);
+        cloud.setOriginCenter();
+        cloud.setScale(scaleX, scaleY);
+        cloud.setRotation(rotation);
 
         cloud.setPosition(
-            mainShipPosition.x - cloud.getWidth() / 2f + driftX,
-            mainShipPosition.y - cloud.getHeight() / 2f + driftY
+            focusX - cloud.getWidth() / 2f + driftX,
+            focusY - cloud.getHeight() / 2f + driftY
         );
 
         cloud.draw(batch);
+
+        cloud.setRotation(0f);
     }
+
+
 
     @Override
     public void resize(int width, int height) {
@@ -168,8 +263,9 @@ public class MainScreen implements Screen {
     public void dispose() {
         batch.dispose();
         background.getTexture().dispose();
+        mainShip.getTexture().dispose();
+        wreck.getTexture().dispose();
         cloud.getTexture().dispose();
-        mainShip.dispose();
     }
 }
 

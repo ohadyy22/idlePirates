@@ -1,26 +1,31 @@
 package com.game7d.idlepirates.render;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
 public class MainShipRenderer {
 
-    // ✅ הגדלים הלוגיים של הספינה בעולם
-    public static final float WORLD_WIDTH  = 180f;
+    // ======== גודל לוגי בעולם ========
+    // כרגע משתמשים בספינה טרופה, לכן נשאיר זה סביר
+    public static final float WORLD_WIDTH  = 130f;
     public static final float WORLD_HEIGHT = 180f;
 
     private final Sprite sprite;
 
-    public MainShipRenderer(String texturePath) {
+    // אנימציה
+    private float baseX;
+    private float baseY;
 
+    public MainShipRenderer(String texturePath) {
         Texture texture = new Texture(
             Gdx.files.internal(texturePath),
             Pixmap.Format.RGBA8888,
-            true // ✅ mipmaps
+            true // mipmaps
         );
 
         texture.setFilter(
@@ -30,35 +35,46 @@ public class MainShipRenderer {
 
         sprite = new Sprite(texture);
         sprite.setSize(WORLD_WIDTH, WORLD_HEIGHT);
-        sprite.setOriginCenter();
+
+        // Origin קצת מתחת למרכז – מרגיש “יושב במים”
+        sprite.setOrigin(WORLD_WIDTH / 2f, WORLD_HEIGHT * 0.35f);
     }
 
     public void setPosition(Vector2 worldPosition) {
-        sprite.setPosition(
-            worldPosition.x - WORLD_WIDTH / 2f,
-            worldPosition.y - WORLD_HEIGHT / 2f
-        );
+        baseX = worldPosition.x - WORLD_WIDTH / 2f;
+        baseY = worldPosition.y - WORLD_HEIGHT / 2f;
+
+        sprite.setPosition(baseX, baseY);
     }
 
     public void render(SpriteBatch batch, float time) {
-        // ✅ אנימציית idle פרוגרמטית (בלי sprite-sheet)
-        float bob = (float) Math.sin(time * 1.2f) * 1.5f;
-        sprite.setY(sprite.getY() + bob);
 
-        float rotation = (float) Math.sin(time * 0.6f) * 1.2f;
+        // ======== אנימציית ים (Idle) ========
+
+        // נדנוד למעלה/למטה
+        float bob = MathUtils.sin(time * 1.1f) * 2.5f;
+
+        // סיבוב עדין שמאלה/ימינה
+        float rotation = MathUtils.sin(time * 0.6f) * 2f;
+
+        // נשימה קלה
+        float scalePulse = 1f + MathUtils.sin(time * 0.8f) * 0.015f;
+
+        sprite.setPosition(baseX, baseY + bob);
         sprite.setRotation(rotation);
+        sprite.setScale(scalePulse);
 
         sprite.draw(batch);
 
-        // להחזיר מצבים
-        sprite.setRotation(0);
-        sprite.setY(sprite.getY() - bob);
+        // ניקוי אחרי ציור
+        sprite.setRotation(0f);
+        sprite.setScale(1f);
+        sprite.setPosition(baseX, baseY);
     }
 
     public void dispose() {
         sprite.getTexture().dispose();
     }
 }
-
 
 
