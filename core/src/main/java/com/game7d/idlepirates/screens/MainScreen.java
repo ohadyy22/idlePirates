@@ -1,5 +1,6 @@
 package com.game7d.idlepirates.screens;
 
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Gdx;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -21,11 +23,14 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.game7d.idlepirates.data.CraftedItem;
 import com.game7d.idlepirates.data.ResourceType;
+import com.game7d.idlepirates.data.WreckCatalog;
+import com.game7d.idlepirates.data.WreckDefinition;
 import com.game7d.idlepirates.market.MarketSystem;
 import com.game7d.idlepirates.progress.ResourceDiscovery;
 import com.game7d.idlepirates.ui.MarketPanel;
 
 import java.util.EnumMap;
+import java.util.List;
 
 public class MainScreen implements Screen {
 
@@ -57,6 +62,7 @@ public class MainScreen implements Screen {
     private Vector2 mainShipPos;
 
     // Wreck – מאוזנת (רחבה)
+    private List<WreckDefinition> wrecks;
     private Sprite wreck;
     private Vector2 wreckPos;
 
@@ -98,6 +104,10 @@ public class MainScreen implements Screen {
         camera.position.set(WORLD_SIZE / 2f, WORLD_SIZE / 2f, 0f);
         camera.update();
 
+        wrecks = WreckCatalog.createInitialWrecks(WORLD_SIZE/2f, WORLD_SIZE/2f);
+
+        // =========================
+        // WORLD (Background)
         // =========================
         // BACKGROUND
         // =========================
@@ -236,11 +246,56 @@ public class MainScreen implements Screen {
         InputMultiplexer mux = new InputMultiplexer();
         mux.addProcessor(uiStage);
         Gdx.input.setInputProcessor(mux);
+        mux.addProcessor(new InputAdapter() {
+            @Override
+            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                Vector3 worldPos = camera.unproject(
+                    new Vector3(screenX, screenY, 0)
+                );
+                return handleWreckClick(worldPos.x, worldPos.y);
+            }
+        });
+
+
+
 
 
 
 
     }
+
+    private boolean handleWreckClick(float x, float y) {
+        float halfWreckW = 96f / 2f;
+        float halfWreckH = 60f / 2f;
+        for (WreckDefinition wreck : wrecks) {
+            if (!wreck.revealed) continue;
+            Vector2 p = wreck.position;
+            if (x >= p.x - halfWreckW && x <= p.x + halfWreckW &&
+                y >= p.y - halfWreckH && y <= p.y + halfWreckH) {
+                onWreckClicked(wreck);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void onWreckClicked(WreckDefinition wreck) {
+        if (wreck.hasCrew()) {
+            // שלב הבא: פתיחת פאנל ספינה
+            return;
+        }
+        int cost = wreck.getCrewCost();
+        // בדיקה + תשלום
+        if (cost == 0 || marketSystem.spendGold(cost)) {
+            wreck.assignCrew();
+            // גילוי משאבים שהספינה מייצרת
+            for (ResourceType type : wreck.productionMix.keySet()) {
+                resourceDiscovery.discover(type);
+            }
+            Gdx.app.log("WRECK", "Crew assigned. Cost=" + cost);
+        }
+    }
+    
 
     @Override
     public void render(float delta) {

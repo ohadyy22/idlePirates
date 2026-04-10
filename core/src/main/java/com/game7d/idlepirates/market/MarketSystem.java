@@ -121,6 +121,41 @@ public class MarketSystem {
 
         return true;
     }
+
+    // =========================
+    // GOLD CONTROL
+    // =========================
+
+
+    /** האם יש מספיק זהב */
+    public boolean hasGold(int amount) {
+        return gold >= amount;
+    }
+
+
+    /** ניסיון להוריד זהב (בטוח) */
+    public boolean spendGold(int amount) {
+        if (amount <= 0) return true;
+
+
+        if (gold < amount) return false;
+
+
+        gold -= amount;
+        return true;
+    }
+
+
+    /** תוספת זהב (אם תרצה בעתיד בונוסים, החזרים וכו') */
+    public void addGold(int amount) {
+        if (amount > 0) {
+            gold += amount;
+        }
+    }
+
+
+
+
 }
 
 
