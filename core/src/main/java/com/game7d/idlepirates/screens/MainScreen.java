@@ -112,6 +112,7 @@ public class MainScreen implements Screen {
         // BACKGROUND
         // =========================
         Texture bgTex = new Texture(Gdx.files.internal("background.png"));
+        bgTex.setWrap(Texture.TextureWrap.Repeat,Texture.TextureWrap.Repeat);
         bgTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
         background = new Sprite(bgTex);
@@ -257,11 +258,6 @@ public class MainScreen implements Screen {
         });
 
 
-
-
-
-
-
     }
 
     private boolean handleWreckClick(float x, float y) {
@@ -295,7 +291,7 @@ public class MainScreen implements Screen {
             Gdx.app.log("WRECK", "Crew assigned. Cost=" + cost);
         }
     }
-    
+
 
     @Override
     public void render(float delta) {
