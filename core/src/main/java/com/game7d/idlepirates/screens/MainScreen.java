@@ -5,6 +5,7 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -375,6 +376,7 @@ public class MainScreen implements Screen {
             ripple.draw(batch,mainShipPos.x ,mainShipPos.y - 50);
         }
 
+        drawShipReflection();
         drawMainShip();
 
 
@@ -417,6 +419,42 @@ public class MainScreen implements Screen {
         mainShip.setScale(1f);
         mainShip.setPosition(x, y);
     }
+
+    private void drawShipReflection() {
+
+        float bob = MathUtils.sin(time * 1.0f) * 2.8f;
+
+        // מיקום הספינה
+        float x = mainShip.getX() + mainShip.getOriginX();
+        float y = mainShip.getY() + mainShip.getOriginY()+bob;
+
+        // כמה נמוך ההשתקפות
+        float waterLineOffset = 12f;
+
+        // שמירת מצב
+        float originalScaleY = mainShip.getScaleY();
+
+        // הופכים אנכית
+        mainShip.setScale(
+            mainShip.getScaleX(),
+            -mainShip.getScaleY() * 0.9f   // סקווש קטן
+        );
+
+        // Alpha נמוך מאוד
+        mainShip.setColor(1f, 1f, 1f, 0.25f);
+
+        // מציירים מתחת לספינה
+        mainShip.setCenter(x, y - waterLineOffset);
+        mainShip.draw(batch);
+
+        // מחזירים מצב
+        mainShip.setScale(
+            mainShip.getScaleX(),
+            originalScaleY
+        );
+        mainShip.setColor(1f, 1f, 1f, 1f);
+    }
+
 
     private void drawWreck() {
         float bob = MathUtils.sin(time * 0.8f) * 1.3f;
