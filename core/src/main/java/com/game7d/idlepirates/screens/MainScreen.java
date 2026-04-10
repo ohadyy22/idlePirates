@@ -93,6 +93,10 @@ public class MainScreen implements Screen {
     //water move
     private Array<WaterRipple> ripples;
     private Texture rippleTexture;
+    private Texture strokesTex;
+    private Sprite strokesSprite;
+    private float strokesOffsetX;
+    private float strokesOffsetY;
 
 
 
@@ -136,6 +140,20 @@ public class MainScreen implements Screen {
         ripples.add(new WaterRipple(rippleTexture, 0.3f, 0.25f));
         ripples.add(new WaterRipple(rippleTexture, 0.5f, 0.20f));
         ripples.add(new WaterRipple(rippleTexture, 0.7f, 0.15f));
+
+        strokesTex = new Texture(Gdx.files.internal("water_strokes.png"));
+        strokesTex.setFilter(
+            Texture.TextureFilter.Linear,
+            Texture.TextureFilter.Linear
+        );
+
+        strokesSprite = new Sprite(strokesTex);
+        strokesSprite.setSize(WORLD_SIZE, WORLD_SIZE);
+        strokesSprite.setPosition(0,0);
+        strokesSprite.setColor(1f, 1f, 1f, 0.5f); // חשוב: עדין!
+
+
+
 
         // =========================
         // MAIN SHIP (Hero) – אנכית
@@ -320,6 +338,9 @@ public class MainScreen implements Screen {
 
         camera.update();
 
+        strokesOffsetX += delta * 12.0f;
+        strokesOffsetY += delta * 4.0f;
+
         for(WaterRipple ripple : ripples){
 
             ripple.update(delta);
@@ -337,6 +358,17 @@ public class MainScreen implements Screen {
         // =========================
         // MAIN SHIP (Hero)
         // =========================
+        strokesSprite.setPosition(
+            -(strokesOffsetX % strokesTex.getWidth()),
+            -(strokesOffsetY % strokesTex.getHeight())
+        );
+
+        strokesSprite.draw(batch);
+
+
+
+
+
 
         for(WaterRipple ripple : ripples){
 
