@@ -19,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.game7d.idlepirates.data.CraftedItem;
@@ -28,6 +29,7 @@ import com.game7d.idlepirates.data.WreckDefinition;
 import com.game7d.idlepirates.market.MarketSystem;
 import com.game7d.idlepirates.progress.ResourceDiscovery;
 import com.game7d.idlepirates.ui.MarketPanel;
+import com.game7d.idlepirates.world.WaterRipple;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -88,6 +90,10 @@ public class MainScreen implements Screen {
     private EnumMap<CraftedItem, Integer> craftedInventory;
     private ResourceDiscovery resourceDiscovery;
 
+    //water move
+    private Array<WaterRipple> ripples;
+    private Texture rippleTexture;
+
 
 
 
@@ -118,6 +124,18 @@ public class MainScreen implements Screen {
         background = new Sprite(bgTex);
         background.setSize(WORLD_SIZE, WORLD_SIZE);
         background.setPosition(0, 0);
+
+
+        rippleTexture = new Texture(Gdx.files.internal("ripple.png"));
+        rippleTexture.setFilter(
+            Texture.TextureFilter.Linear,
+            Texture.TextureFilter.Linear
+        );
+
+        ripples = new Array<>();
+        ripples.add(new WaterRipple(rippleTexture, 0.3f, 0.25f));
+        ripples.add(new WaterRipple(rippleTexture, 0.5f, 0.20f));
+        ripples.add(new WaterRipple(rippleTexture, 0.7f, 0.15f));
 
         // =========================
         // MAIN SHIP (Hero) – אנכית
@@ -301,8 +319,14 @@ public class MainScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         camera.update();
-        batch.setProjectionMatrix(camera.combined);
 
+        for(WaterRipple ripple : ripples){
+
+            ripple.update(delta);
+        }
+
+
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
         // =========================
@@ -313,7 +337,15 @@ public class MainScreen implements Screen {
         // =========================
         // MAIN SHIP (Hero)
         // =========================
+
+        for(WaterRipple ripple : ripples){
+
+            ripple.draw(batch,mainShipPos.x ,mainShipPos.y - 50);
+        }
+
         drawMainShip();
+
+
 
         // =========================
         // WRECK
