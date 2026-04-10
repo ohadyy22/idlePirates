@@ -28,6 +28,7 @@ import com.game7d.idlepirates.data.WreckDefinition;
 import com.game7d.idlepirates.market.MarketSystem;
 import com.game7d.idlepirates.progress.ResourceDiscovery;
 import com.game7d.idlepirates.ui.MarketPanel;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -88,6 +89,9 @@ public class MainScreen implements Screen {
     private EnumMap<CraftedItem, Integer> craftedInventory;
     private ResourceDiscovery resourceDiscovery;
 
+    //--- water ---
+    private ShaderProgram waterShader;
+    private float waterTime =0f;
 
 
 
@@ -119,6 +123,12 @@ public class MainScreen implements Screen {
         background.setSize(WORLD_SIZE, WORLD_SIZE);
         background.setPosition(0, 0);
 
+        ShaderProgram.pedantic =false;
+
+        waterShader = new ShaderProgram(Gdx.files.internal("water.vert"), Gdx.files.internal("water.frag"));
+        if (!waterShader.isCompiled()){
+            throw new RuntimeException("Shader compile error:"+waterShader.getLog());
+        }
         // =========================
         // MAIN SHIP (Hero) – אנכית
         // =========================
@@ -303,13 +313,20 @@ public class MainScreen implements Screen {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
 
+        waterTime +=delta;
+
+
         batch.begin();
 
         // =========================
         // WORLD
         // =========================
+        batch.setShader(waterShader);
+        waterShader.setUniformf("u_time",waterTime);
+
         background.draw(batch);
 
+        batch.setShader(null);
         // =========================
         // MAIN SHIP (Hero)
         // =========================
