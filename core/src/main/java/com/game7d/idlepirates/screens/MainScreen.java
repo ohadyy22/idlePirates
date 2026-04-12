@@ -302,14 +302,16 @@ public class MainScreen implements Screen {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 
-                // ⭐ חובה: להחיל את World Viewport
-                viewport.apply(false);
-
                 Vector3 worldPos = new Vector3(screenX, screenY, 0);
-                camera.unproject(worldPos);
+
+                // ⭐ ההבדל הקריטי ⭐
+                viewport.unproject(worldPos);
 
                 return handleWreckClick(worldPos.x, worldPos.y);
             }
+
+
+
         });
 
         Gdx.input.setInputProcessor(mux);
