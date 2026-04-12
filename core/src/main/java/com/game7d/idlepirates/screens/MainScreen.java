@@ -298,25 +298,79 @@ public class MainScreen implements Screen {
         InputMultiplexer mux = new InputMultiplexer();
         mux.addProcessor(uiStage);
         mux.addProcessor(new InputAdapter() {
+
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                Vector3 worldPos = camera.unproject(
-                    new Vector3(screenX, screenY, 0)
-                );
+
+                // ⭐ חובה: להחיל את World Viewport
+                viewport.apply(false);
+
+                Vector3 worldPos = new Vector3(screenX, screenY, 0);
+                camera.unproject(worldPos);
+
                 return handleWreckClick(worldPos.x, worldPos.y);
             }
         });
+
         Gdx.input.setInputProcessor(mux);
+
+
+
     }
 
 
 
 
-    private boolean handleWreckClick(float x, float y) {
+    private boolean handleWreckClick(float worldX, float worldY) {
 
+        for (Wreck wreck : gameWorld.wrecks) {
+
+            // לא ניתן לקנות שוב
+            if (wreck.hasCrew)
+                continue;
+
+            // לא נראה => לא לחיץ
+            if (visionRange < wreck.definition.requiredVision)
+                continue;
+
+            // בדיקת פגיעה פשוטה (Bounding Box)
+            float halfW = wreckSprite.getWidth() / 2f;
+            float halfH = wreckSprite.getHeight() / 2f;
+
+            if (worldX >= wreck.position.x - halfW &&
+                worldX <= wreck.position.x + halfW &&
+                worldY >= wreck.position.y - halfH &&
+                worldY <= wreck.position.y + halfH) {
+
+                attemptPurchase(wreck);
+                return true;
+            }
+        }
 
         return false;
     }
+
+    private void attemptPurchase(Wreck wreck) {
+
+        int cost = wreck.definition.crewCost;
+
+        // בדיקה שיש כסף
+        if (!marketSystem.hasGold(cost)) {
+            // כאן אפשר בעתיד להציג "Not enough gold"
+            Gdx.app.log("PURCHASE", "Not enough gold");
+            return;
+        }
+
+        // תשלום
+        marketSystem.spendGold(cost);
+
+        // הרכישה עצמה – עולם משנה state
+        gameWorld.assignCrew(wreck);
+    }
+
+
+
+
 
     private void onWreckClicked(Wreck wreck) {
 

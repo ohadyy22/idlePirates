@@ -68,6 +68,21 @@ public class GameWorld {
         workshopSystem.update(delta);
         upgradeSystem.update(delta);
     }
+    public void assignCrew(Wreck wreck) {
+
+        if (wreck.hasCrew)
+            return;
+
+        wreck.hasCrew = true;
+
+        // כאן אפשר בעתיד:
+        // - להדליק FX
+        // - לספור סטטיסטיקות
+        // - לפתוח שדרוגים
+    }
+
+
+
 }
 
 
