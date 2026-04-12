@@ -15,33 +15,16 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 
-/**
- * GameWorld
- *
- * מחזיק את כל מצב המשחק הלוגי:
- * - ישויות (Wreck, MainShip)
- * - מערכות (BoatSystem, WorkshopSystem, UpgradeSystem)
- *
- * אין כאן:
- * - UI
- * - Rendering
- * - Input
- */
 public class GameWorld {
 
     public final MainShip mainShip;
-
-    /** מופעי ספינות טרופות בעולם */
     public final List<Wreck> wrecks = new ArrayList<>();
 
-    /** בנקים משותפים */
     public final EnumMap<ResourceType, Integer> resourceBank =
         new EnumMap<>(ResourceType.class);
-
     public final EnumMap<CraftedItem, Integer> craftedInventory =
         new EnumMap<>(CraftedItem.class);
 
-    /** מערכות */
     public final BoatSystem boatSystem;
     public final WorkshopSystem workshopSystem;
     public final UpgradeSystem upgradeSystem;
@@ -49,42 +32,38 @@ public class GameWorld {
     public GameWorld(MainShip mainShip) {
         this.mainShip = mainShip;
 
-        // יצירת מופעי Wreck מהקטלוג
-        initWrecksFromCatalog();
+        initWrecks();
 
-        // מערכות
         this.boatSystem = new BoatSystem(mainShip, wrecks);
         this.workshopSystem = new WorkshopSystem(mainShip);
         this.upgradeSystem = new UpgradeSystem(resourceBank, craftedInventory);
     }
 
-    /** יצירת כל ה-Wrecks בעולם מהקטלוג */
-    private void initWrecksFromCatalog() {
+    private void initWrecks() {
+        List<WreckDefinition> defs = WreckCatalog.createAllDefinitions();
 
-        List<WreckDefinition> defs =
-            WreckCatalog.createAllDefinitions();
+        if (defs == null || defs.isEmpty()) {
+            throw new IllegalStateException("No wreck definitions in catalog");
+        }
 
-        // מיקומים דוגמה (בהמשך יבואו מ-Save / MapGen)
+        // מיקומים לדוגמה – אפשר להזיז אחר כך
         wrecks.add(new Wreck(defs.get(0),
-            new Vector2(120, 80)));
+            new Vector2(mainShip.position.x + 260f, mainShip.position.y - 120f)));
 
         wrecks.add(new Wreck(defs.get(1),
-            new Vector2(-200, 150)));
+            new Vector2(mainShip.position.x - 300f, mainShip.position.y + 100f)));
 
         wrecks.add(new Wreck(defs.get(2),
-            new Vector2(350, -120)));
+            new Vector2(mainShip.position.x + 120f, mainShip.position.y - 280f)));
 
         wrecks.add(new Wreck(defs.get(3),
-            new Vector2(-420, -260)));
+            new Vector2(mainShip.position.x - 350f, mainShip.position.y - 160f)));
     }
 
-    /** עדכון לוגי של העולם */
     public void update(float delta) {
-
         for (Wreck wreck : wrecks) {
             wreck.update(delta);
         }
-
         boatSystem.update(delta);
         workshopSystem.update(delta);
         upgradeSystem.update(delta);

@@ -20,13 +20,18 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.game7d.idlepirates.core.GameWorld;
 import com.game7d.idlepirates.data.CraftedItem;
 import com.game7d.idlepirates.data.ResourceType;
 import com.game7d.idlepirates.data.WreckCatalog;
 import com.game7d.idlepirates.data.WreckDefinition;
+import com.game7d.idlepirates.entities.MainShip;
 import com.game7d.idlepirates.entities.Wreck;
 import com.game7d.idlepirates.market.MarketSystem;
 import com.game7d.idlepirates.progress.ResourceDiscovery;
@@ -62,11 +67,10 @@ public class MainScreen implements Screen {
     private Sprite cloud;
 
     // Main ship (Hero) – אנכית
-    private Sprite mainShip;
+    private Sprite mainShipSprite;
     private Vector2 mainShipPos;
 
     // Wreck – מאוזנת (רחבה)
-    private Array<Wreck> wrecks;
     private Sprite wreckSprite;
 
 
@@ -100,15 +104,20 @@ public class MainScreen implements Screen {
     private float strokesOffsetX;
     private float strokesOffsetY;
 
-
-
+    //world
+    private GameWorld gameWorld;
+    private MainShip mainShip;
+    private ObjectMap<Wreck,Label> wreckCostLabels;
 
 
     @Override
     public void show() {
+
+        // =========================
+        // BATCH + CAMERA + VIEWPORT
+        // =========================
         batch = new SpriteBatch();
 
-        // Camera + Viewport
         camera = new OrthographicCamera();
         viewport = new FitViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
         viewport.apply();
@@ -116,35 +125,31 @@ public class MainScreen implements Screen {
         camera.position.set(WORLD_SIZE / 2f, WORLD_SIZE / 2f, 0f);
         camera.update();
 
-        wrecks = new Array<>();
-
-        List<WreckDefinition> defs = WreckCatalog.createAllDefinitions();
-
+        // =========================
+        // MAIN SHIP (LOGIC FIRST)
+        // =========================
         mainShipPos = new Vector2(WORLD_SIZE / 2f, WORLD_SIZE / 2f);
-
-
-// מיקומים לדוגמה (4 ספינות)
-        wrecks.add(new Wreck(defs.get(0), new Vector2(mainShipPos.x + 260f, mainShipPos.y - 120f)));
-        wrecks.add(new Wreck(defs.get(1), new Vector2(mainShipPos.x - 300f, mainShipPos.y + 100f)));
-        wrecks.add(new Wreck(defs.get(2), new Vector2(mainShipPos.x + 120f, mainShipPos.y - 280f)));
-        wrecks.add(new Wreck(defs.get(3), new Vector2(mainShipPos.x - 350f, mainShipPos.y - 160f)));
-
-
+        mainShip = new MainShip(mainShipPos);
 
         // =========================
-        // WORLD (Background)
+        // GAME WORLD (LOGIC ONLY)
+        // =========================
+        gameWorld = new GameWorld(mainShip);
+
         // =========================
         // BACKGROUND
         // =========================
         Texture bgTex = new Texture(Gdx.files.internal("background.png"));
-        bgTex.setWrap(Texture.TextureWrap.Repeat,Texture.TextureWrap.Repeat);
+        bgTex.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
         bgTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
         background = new Sprite(bgTex);
         background.setSize(WORLD_SIZE, WORLD_SIZE);
         background.setPosition(0, 0);
 
-
+        // =========================
+        // WATER EFFECTS
+        // =========================
         rippleTexture = new Texture(Gdx.files.internal("ripple.png"));
         rippleTexture.setFilter(
             Texture.TextureFilter.Linear,
@@ -164,14 +169,10 @@ public class MainScreen implements Screen {
 
         strokesSprite = new Sprite(strokesTex);
         strokesSprite.setSize(WORLD_SIZE, WORLD_SIZE);
-        strokesSprite.setPosition(0,0);
-        strokesSprite.setColor(1f, 1f, 1f, 0.5f); // חשוב: עדין!
-
-
-
+        strokesSprite.setColor(1f, 1f, 1f, 0.5f);
 
         // =========================
-        // MAIN SHIP (Hero) – אנכית
+        // MAIN SHIP SPRITE (VISUAL)
         // =========================
         Texture mainTex = new Texture(
             Gdx.files.internal("main_ship.png"),
@@ -183,18 +184,15 @@ public class MainScreen implements Screen {
             Texture.TextureFilter.Linear
         );
 
-        mainShip = new Sprite(mainTex);
-
-        // ✅ Hero גדול ובולט – אנכי יותר
-        final float MAIN_W = 180f;
-        final float MAIN_H = 260f;
-
-        mainShip.setSize(MAIN_W, MAIN_H);
-        mainShip.setOrigin(MAIN_W / 2f, MAIN_H * 0.35f);
-
+        mainShipSprite = new Sprite(mainTex);
+        mainShipSprite.setSize(180f, 260f);
+        mainShipSprite.setOrigin(
+            mainShipSprite.getWidth() / 2f,
+            mainShipSprite.getHeight() * 0.35f
+        );
 
         // =========================
-        // WRECK – מאוזנת (רחבה)
+        // WRECK SPRITE (SHARED)
         // =========================
         Texture wreckTex = new Texture(
             Gdx.files.internal("wreck.png"),
@@ -207,27 +205,17 @@ public class MainScreen implements Screen {
         );
 
         wreckSprite = new Sprite(wreckTex);
-        wreckSprite.setSize(69f,69f);
+        wreckSprite.setSize(96f, 60f);
         wreckSprite.setOriginCenter();
 
-        // ✅ קטן וברור מה-Hero
-        final float WRECK_W = 96f;
-        final float WRECK_H = 60f;
-
-        //wreck.setSize(WRECK_W, WRECK_H);
-        //wreck.setOrigin(WRECK_W / 2f, WRECK_H * 0.4f);
-
-
-
         // =========================
-        // CLOUD (Fog of War)
+        // CLOUD / FOG OF WAR
         // =========================
         Texture cloudTex = new Texture(
             Gdx.files.internal("cloud.png"),
             Pixmap.Format.RGBA8888,
             true
         );
-
         cloudTex.setFilter(
             Texture.TextureFilter.MipMapLinearLinear,
             Texture.TextureFilter.Linear
@@ -236,33 +224,30 @@ public class MainScreen implements Screen {
         cloud = new Sprite(cloudTex);
         cloud.setOriginCenter();
 
+        // =========================
+        // UI STAGE + SKIN
+        // =========================
+        uiStage = new Stage(new ScreenViewport());
+        skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
-        // ========= UI STAGE =========
-        uiStage = new Stage(new FitViewport(1080, 1920));
-        FileHandle fh = Gdx.files.internal("ui\\uiskin.json");
-        Gdx.app.log("ASSET", "uiskin.json exists = " + fh.exists());
-
-
-
-
-        skin = new Skin(Gdx.files.internal("ui\\uiskin.json"));
-
-        // ========= ECONOMY BASE =========
+        // =========================
+        // ECONOMY SYSTEMS
+        // =========================
         resourceBank = new EnumMap<>(ResourceType.class);
         craftedInventory = new EnumMap<>(CraftedItem.class);
         resourceDiscovery = new ResourceDiscovery();
 
+        resourceDiscovery.discover(ResourceType.WOOD);
 
-
-// ========= ECONOMY =========
-        resourceDiscovery.discover(ResourceType.WOOD); // הספינה החינמית
         marketSystem = new MarketSystem(
             resourceBank,
             craftedInventory,
             resourceDiscovery
         );
 
-// ========= TOP BAR =========
+        // =========================
+        // TOP BAR
+        // =========================
         Table topBar = new Table();
         topBar.setFillParent(true);
         topBar.top().pad(10);
@@ -280,21 +265,38 @@ public class MainScreen implements Screen {
 
         topBar.add(marketButton).left().padRight(10);
         topBar.add(goldLabel).left();
-
         uiStage.addActor(topBar);
 
-// ========= MARKET PANEL =========
+        // =========================
+        // MARKET PANEL
+        // =========================
         marketPanel = new MarketPanel(marketSystem, skin);
         marketPanel.setVisible(false);
         marketPanel.setSize(860, 1200);
         marketPanel.setPosition(110, 300);
-
         uiStage.addActor(marketPanel);
 
-// ========= INPUT =========
+        // =========================
+        // WRECK COST LABELS (UI)
+        // =========================
+        wreckCostLabels = new ObjectMap<>();
+
+        Label.LabelStyle labelStyle =
+            new Label.LabelStyle(skin.getFont("default"), Color.WHITE);
+
+        for (Wreck wreck : gameWorld.wrecks) {
+            Label label = new Label("", labelStyle);
+            label.setAlignment(Align.center);
+            label.setVisible(false);
+            uiStage.addActor(label);
+            wreckCostLabels.put(wreck, label);
+        }
+
+        // =========================
+        // INPUT
+        // =========================
         InputMultiplexer mux = new InputMultiplexer();
         mux.addProcessor(uiStage);
-        Gdx.input.setInputProcessor(mux);
         mux.addProcessor(new InputAdapter() {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
@@ -304,35 +306,13 @@ public class MainScreen implements Screen {
                 return handleWreckClick(worldPos.x, worldPos.y);
             }
         });
-
-
+        Gdx.input.setInputProcessor(mux);
     }
 
+
+
+
     private boolean handleWreckClick(float x, float y) {
-
-        for (Wreck wreck : wrecks) {
-
-            if (wreck.hasCrew)
-                continue;
-
-            if (visionRange < wreck.definition.requiredVision)
-                continue;
-
-            float halfW = 48f;
-            float halfH = 30f;
-
-            Vector2 p = wreck.position;
-
-            if (x >= p.x - halfW && x <= p.x + halfW &&
-                y >= p.y - halfH && y <= p.y + halfH) {
-
-                onWreckClicked(wreck);
-                return true;
-            }
-        }
-
-
-
 
 
         return false;
@@ -358,116 +338,166 @@ public class MainScreen implements Screen {
 
     @Override
     public void render(float delta) {
+
+        // =========================
+        // UPDATE
+        // =========================
         time += delta;
 
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        // לוגיקה של העולם
+        gameWorld.update(delta);
 
-        camera.update();
-
+        // תזוזת מים
         strokesOffsetX += delta * 12.0f;
         strokesOffsetY += delta * 4.0f;
 
-        for(WaterRipple ripple : ripples){
-
+        for (WaterRipple ripple : ripples) {
             ripple.update(delta);
         }
 
+        // =========================
+        // CLEAR
+        // =========================
+        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        viewport.apply(false);
+        camera.update();
         batch.setProjectionMatrix(camera.combined);
+
+        // =========================
+        // DRAW WORLD
+        // =========================
         batch.begin();
 
-        // =========================
-        // WORLD
-        // =========================
+        // --- Background ---
         background.draw(batch);
 
-        // =========================
-        // MAIN SHIP (Hero)
-        // =========================
+        // --- Water strokes overlay ---
         strokesSprite.setPosition(
             -(strokesOffsetX % strokesTex.getWidth()),
             -(strokesOffsetY % strokesTex.getHeight())
         );
-
         strokesSprite.draw(batch);
 
-
-        for(WaterRipple ripple : ripples){
-
-            ripple.draw(batch,mainShipPos.x ,mainShipPos.y - 50);
+        // --- Ripples סביב הספינה הראשית ---
+        for (WaterRipple ripple : ripples) {
+            ripple.draw(batch,
+                mainShip.position.x,
+                mainShip.position.y - 50f
+            );
         }
 
+        // --- Reflection + Main ship ---
         drawShipReflection();
         drawMainShip();
 
-
-
         // =========================
-        // WRECK
+        // DRAW WRECKS
         // =========================
+        for (Wreck wreck : gameWorld.wrecks) {
 
-        for (Wreck wreck : wrecks) {
-
-            // Vision = תנאי תצוגה בלבד
+            // Vision = סינון תצוגה בלבד
             if (visionRange < wreck.definition.requiredVision)
                 continue;
 
-            // צבע לפי יש/אין צוות
-            if (!wreck.hasCrew) {
-                wreckSprite.setColor(0.5f, 0.5f, 0.5f, 1f);
-            } else {
+            // צבע לפי האם נשלח צוות
+            if (wreck.hasCrew) {
                 wreckSprite.setColor(1f, 1f, 1f, 1f);
+            } else {
+                wreckSprite.setColor(0.5f, 0.5f, 0.5f, 1f);
             }
 
-            // אנימציה קטנה
-            float bob = MathUtils.sin(time * 0.8f + wreck.position.x * 0.01f) * 1.3f;
-            float rot = MathUtils.sin(time * 0.4f + wreck.position.y * 0.01f) * 0.9f;
+            float bob =
+                MathUtils.sin(time * 0.8f + wreck.position.x * 0.01f) * 1.3f;
+            float rot =
+                MathUtils.sin(time * 0.4f + wreck.position.y * 0.01f) * 0.9f;
 
             wreckSprite.setCenter(
                 wreck.position.x,
                 wreck.position.y + bob
             );
-
             wreckSprite.setRotation(rot);
+
             wreckSprite.draw(batch);
             wreckSprite.setRotation(0f);
         }
 
-
-
-        // =========================
-        // CLOUD –– תמיד אחרון
-        // =========================
+        // --- Cloud תמיד אחרון בעולם ---
         drawCloud();
+
         batch.end();
 
         // =========================
-        // UI
+        // UI / TEXT
         // =========================
+
+        // Gold
         goldLabel.setText("Gold: " + marketSystem.getGold());
+
+        // טקסט מחיר מעל ספינות טרופות
+        for (Wreck wreck : gameWorld.wrecks) {
+
+            Label label = wreckCostLabels.get(wreck);
+
+            if (label == null) continue;
+
+            if (visionRange < wreck.definition.requiredVision || wreck.hasCrew) {
+                label.setVisible(false);
+                continue;
+            }
+
+            int cost = wreck.definition.crewCost;
+
+            if (cost == 0) {
+                label.setText("FREE");
+                label.setColor(Color.GOLD);
+            } else {
+                label.setText("Crew: " + cost);
+                label.setColor(Color.WHITE);
+            }
+
+            Vector3 screenPos = camera.project(
+                new Vector3(
+                    wreck.position.x,
+                    wreck.position.y + 60f,
+                    0
+                )
+            );
+
+            label.setPosition(
+                screenPos.x - label.getWidth() / 2f,
+                screenPos.y
+            );
+
+            label.setVisible(true);
+        }
+
+        // Stage
         uiStage.act(delta);
         uiStage.draw();
-
     }
+
+
+
 
     private void drawMainShip() {
         float bob = MathUtils.sin(time * 1.0f) * 2.8f;
         float rotation = MathUtils.sin(time * 0.6f) * 2.0f;
         float pulse = 1f + MathUtils.sin(time * 0.8f) * 0.015f;
 
-        float x = mainShipPos.x - mainShip.getWidth() / 2f;
-        float y = mainShipPos.y - mainShip.getHeight() / 2f;
+        float x = mainShipPos.x - mainShipSprite.getWidth() / 2f;
+        float y = mainShipPos.y - mainShipSprite.getHeight() / 2f;
 
-        mainShip.setPosition(x, y + bob);
-        mainShip.setRotation(rotation);
-        mainShip.setScale(pulse);
+        mainShipSprite.setPosition(x, y + bob);
+        mainShipSprite.setRotation(rotation);
+        mainShipSprite.setScale(pulse);
 
-        mainShip.draw(batch);
+        mainShipSprite.draw(batch);
 
-        mainShip.setRotation(0f);
-        mainShip.setScale(1f);
-        mainShip.setPosition(x, y);
+        mainShipSprite.setRotation(0f);
+        mainShipSprite.setScale(1f);
+        mainShipSprite.setPosition(x, y);
     }
 
     private void drawShipReflection() {
@@ -475,34 +505,34 @@ public class MainScreen implements Screen {
         float bob = MathUtils.sin(time * 1.0f) * 2.8f;
 
         // מיקום הספינה
-        float x = mainShip.getX() + mainShip.getOriginX();
-        float y = mainShip.getY() + mainShip.getOriginY()+bob;
+        float x = mainShipSprite.getX() + mainShipSprite.getOriginX();
+        float y = mainShipSprite.getY() + mainShipSprite.getOriginY()+bob;
 
         // כמה נמוך ההשתקפות
         float waterLineOffset = 12f;
 
         // שמירת מצב
-        float originalScaleY = mainShip.getScaleY();
+        float originalScaleY = mainShipSprite.getScaleY();
 
         // הופכים אנכית
-        mainShip.setScale(
-            mainShip.getScaleX(),
-            -mainShip.getScaleY() * 0.9f   // סקווש קטן
+        mainShipSprite.setScale(
+            mainShipSprite.getScaleX(),
+            -mainShipSprite.getScaleY() * 0.9f   // סקווש קטן
         );
 
         // Alpha נמוך מאוד
-        mainShip.setColor(1f, 1f, 1f, 0.25f);
+        mainShipSprite.setColor(1f, 1f, 1f, 0.25f);
 
         // מציירים מתחת לספינה
-        mainShip.setCenter(x, y - waterLineOffset);
-        mainShip.draw(batch);
+        mainShipSprite.setCenter(x, y - waterLineOffset);
+        mainShipSprite.draw(batch);
 
         // מחזירים מצב
-        mainShip.setScale(
-            mainShip.getScaleX(),
+        mainShipSprite.setScale(
+            mainShipSprite.getScaleX(),
             originalScaleY
         );
-        mainShip.setColor(1f, 1f, 1f, 1f);
+        mainShipSprite.setColor(1f, 1f, 1f, 1f);
     }
 
 
@@ -562,8 +592,8 @@ public class MainScreen implements Screen {
         if (background != null && background.getTexture() != null)
             background.getTexture().dispose();
 
-        if (mainShip != null && mainShip.getTexture() != null)
-            mainShip.getTexture().dispose();
+        if (mainShipSprite != null && mainShipSprite.getTexture() != null)
+            mainShipSprite.getTexture().dispose();
 
         if (cloud != null && cloud.getTexture() != null)
             cloud.getTexture().dispose();
