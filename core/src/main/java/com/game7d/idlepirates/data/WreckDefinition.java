@@ -1,74 +1,50 @@
 package com.game7d.idlepirates.data;
 
-
-import com.badlogic.gdx.math.Vector2;
+import com.game7d.idlepirates.data.ResourceType;
 import java.util.EnumMap;
 
-
 /**
- * הגדרה לוגית של ספינה טרופה.
- * תואם ב-100% למבנה המקורי, עם הרחבות לא שוברים.
+ * הגדרה לוגית של סוג ספינה טרופה.
+ * - אינו משתנה בזמן משחק
+ * - אין כאן state (אין hasCrew, אין timers)
  */
 public class WreckDefinition {
 
+    public final String id;
 
-    // ===== מה שהיה אצלך =====
-    public final Vector2 position;
+    /** מחיר גיוס צוות */
+    public final int crewCost;
+
+    /** כמה Vision צריך כדי לראות */
     public final float requiredVision;
 
-
-    public boolean revealed = false;
-
-
-    public WreckDefinition(Vector2 position, float requiredVision) {
-        this.position = position;
-        this.requiredVision = requiredVision;
-        this.productionMix = new EnumMap<>(ResourceType.class);
-    }
-
-
-    // ===== הרחבות חדשות, עם ערכי ברירת מחדל =====
-
-
-    /** מחיר גיוס צוות (ברירת מחדל: חינם) */
-    private int crewCost = 0;
-
-
-    /** האם כבר נשלח צוות */
-    private boolean hasCrew = false;
-
-
-    /** חלוקת משאבים (באחוזים) */
+    /** חלוקת משאבים באחוזים */
     public final EnumMap<ResourceType, Integer> productionMix;
 
+    /** זמן בסיסי למחזור ייצור (בשניות) */
+    public final float baseProductionTime;
 
-    // ===== API =====
+    /** כמות בסיסית של משאב לכל איסוף */
+    public final int baseCargo;
 
-
-    public void setCrewCost(int crewCost) {
+    public WreckDefinition(
+        String id,
+        int crewCost,
+        float requiredVision,
+        float baseProductionTime,
+        int baseCargo
+    ) {
+        this.id = id;
         this.crewCost = crewCost;
+        this.requiredVision = requiredVision;
+        this.baseProductionTime = baseProductionTime;
+        this.baseCargo = baseCargo;
+
+        this.productionMix = new EnumMap<>(ResourceType.class);
     }
-
-
-    public int getCrewCost() {
-        return crewCost;
-    }
-
-
-    public boolean hasCrew() {
-        return hasCrew;
-    }
-
-
-    public void assignCrew() {
-        this.hasCrew = true;
-    }
-
 
     public void addProduction(ResourceType type, int percent) {
         productionMix.put(type, percent);
     }
 }
-
-
 

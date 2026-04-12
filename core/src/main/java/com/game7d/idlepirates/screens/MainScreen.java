@@ -27,6 +27,7 @@ import com.game7d.idlepirates.data.CraftedItem;
 import com.game7d.idlepirates.data.ResourceType;
 import com.game7d.idlepirates.data.WreckCatalog;
 import com.game7d.idlepirates.data.WreckDefinition;
+import com.game7d.idlepirates.entities.Wreck;
 import com.game7d.idlepirates.market.MarketSystem;
 import com.game7d.idlepirates.progress.ResourceDiscovery;
 import com.game7d.idlepirates.ui.MarketPanel;
@@ -65,9 +66,9 @@ public class MainScreen implements Screen {
     private Vector2 mainShipPos;
 
     // Wreck – מאוזנת (רחבה)
-    private List<WreckDefinition> wrecks;
-    private Sprite wreck;
-    private Vector2 wreckPos;
+    private Array<Wreck> wrecks;
+    private Sprite wreckSprite;
+
 
     // =========================
     // STATE
@@ -115,7 +116,20 @@ public class MainScreen implements Screen {
         camera.position.set(WORLD_SIZE / 2f, WORLD_SIZE / 2f, 0f);
         camera.update();
 
-        wrecks = WreckCatalog.createInitialWrecks(WORLD_SIZE/2f, WORLD_SIZE/2f);
+        wrecks = new Array<>();
+
+        List<WreckDefinition> defs = WreckCatalog.createAllDefinitions();
+
+        mainShipPos = new Vector2(WORLD_SIZE / 2f, WORLD_SIZE / 2f);
+
+
+// מיקומים לדוגמה (4 ספינות)
+        wrecks.add(new Wreck(defs.get(0), new Vector2(mainShipPos.x + 260f, mainShipPos.y - 120f)));
+        wrecks.add(new Wreck(defs.get(1), new Vector2(mainShipPos.x - 300f, mainShipPos.y + 100f)));
+        wrecks.add(new Wreck(defs.get(2), new Vector2(mainShipPos.x + 120f, mainShipPos.y - 280f)));
+        wrecks.add(new Wreck(defs.get(3), new Vector2(mainShipPos.x - 350f, mainShipPos.y - 160f)));
+
+
 
         // =========================
         // WORLD (Background)
@@ -178,7 +192,6 @@ public class MainScreen implements Screen {
         mainShip.setSize(MAIN_W, MAIN_H);
         mainShip.setOrigin(MAIN_W / 2f, MAIN_H * 0.35f);
 
-        mainShipPos = new Vector2(WORLD_SIZE / 2f, WORLD_SIZE / 2f);
 
         // =========================
         // WRECK – מאוזנת (רחבה)
@@ -193,20 +206,18 @@ public class MainScreen implements Screen {
             Texture.TextureFilter.Linear
         );
 
-        wreck = new Sprite(wreckTex);
+        wreckSprite = new Sprite(wreckTex);
+        wreckSprite.setSize(69f,69f);
+        wreckSprite.setOriginCenter();
 
         // ✅ קטן וברור מה-Hero
         final float WRECK_W = 96f;
         final float WRECK_H = 60f;
 
-        wreck.setSize(WRECK_W, WRECK_H);
-        wreck.setOrigin(WRECK_W / 2f, WRECK_H * 0.4f);
+        //wreck.setSize(WRECK_W, WRECK_H);
+        //wreck.setOrigin(WRECK_W / 2f, WRECK_H * 0.4f);
 
-        // ליד הספינה הראשית – מעט ימינה ולמטה
-        wreckPos = new Vector2(
-            mainShipPos.x + 260f,
-            mainShipPos.y - 120f
-        );
+
 
         // =========================
         // CLOUD (Fog of War)
@@ -298,36 +309,51 @@ public class MainScreen implements Screen {
     }
 
     private boolean handleWreckClick(float x, float y) {
-        float halfWreckW = 96f / 2f;
-        float halfWreckH = 60f / 2f;
-        for (WreckDefinition wreck : wrecks) {
-            if (!wreck.revealed) continue;
+
+        for (Wreck wreck : wrecks) {
+
+            if (wreck.hasCrew)
+                continue;
+
+            if (visionRange < wreck.definition.requiredVision)
+                continue;
+
+            float halfW = 48f;
+            float halfH = 30f;
+
             Vector2 p = wreck.position;
-            if (x >= p.x - halfWreckW && x <= p.x + halfWreckW &&
-                y >= p.y - halfWreckH && y <= p.y + halfWreckH) {
+
+            if (x >= p.x - halfW && x <= p.x + halfW &&
+                y >= p.y - halfH && y <= p.y + halfH) {
+
                 onWreckClicked(wreck);
                 return true;
             }
         }
+
+
+
+
+
         return false;
     }
 
-    private void onWreckClicked(WreckDefinition wreck) {
-        if (wreck.hasCrew()) {
-            // שלב הבא: פתיחת פאנל ספינה
-            return;
-        }
-        int cost = wreck.getCrewCost();
-        // בדיקה + תשלום
+    private void onWreckClicked(Wreck wreck) {
+
+        int cost = wreck.definition.crewCost;
+
         if (cost == 0 || marketSystem.spendGold(cost)) {
-            wreck.assignCrew();
-            // גילוי משאבים שהספינה מייצרת
-            for (ResourceType type : wreck.productionMix.keySet()) {
+            wreck.hasCrew = true;
+
+            // גילוי משאבים
+            for (ResourceType type : wreck.definition.productionMix.keySet()) {
                 resourceDiscovery.discover(type);
             }
-            Gdx.app.log("WRECK", "Crew assigned. Cost=" + cost);
+
+            Gdx.app.log("WRECK", "Crew assigned to " + wreck.definition.id);
         }
     }
+
 
 
     @Override
@@ -367,10 +393,6 @@ public class MainScreen implements Screen {
         strokesSprite.draw(batch);
 
 
-
-
-
-
         for(WaterRipple ripple : ripples){
 
             ripple.draw(batch,mainShipPos.x ,mainShipPos.y - 50);
@@ -384,7 +406,35 @@ public class MainScreen implements Screen {
         // =========================
         // WRECK
         // =========================
-        drawWreck();
+
+        for (Wreck wreck : wrecks) {
+
+            // Vision = תנאי תצוגה בלבד
+            if (visionRange < wreck.definition.requiredVision)
+                continue;
+
+            // צבע לפי יש/אין צוות
+            if (!wreck.hasCrew) {
+                wreckSprite.setColor(0.5f, 0.5f, 0.5f, 1f);
+            } else {
+                wreckSprite.setColor(1f, 1f, 1f, 1f);
+            }
+
+            // אנימציה קטנה
+            float bob = MathUtils.sin(time * 0.8f + wreck.position.x * 0.01f) * 1.3f;
+            float rot = MathUtils.sin(time * 0.4f + wreck.position.y * 0.01f) * 0.9f;
+
+            wreckSprite.setCenter(
+                wreck.position.x,
+                wreck.position.y + bob
+            );
+
+            wreckSprite.setRotation(rot);
+            wreckSprite.draw(batch);
+            wreckSprite.setRotation(0f);
+        }
+
+
 
         // =========================
         // CLOUD –– תמיד אחרון
@@ -456,22 +506,6 @@ public class MainScreen implements Screen {
     }
 
 
-    private void drawWreck() {
-        float bob = MathUtils.sin(time * 0.8f) * 1.3f;
-        float rotation = MathUtils.sin(time * 0.4f) * 0.9f;
-
-        float x = wreckPos.x - wreck.getWidth() / 2f;
-        float y = wreckPos.y - wreck.getHeight() / 2f - 10f;
-
-        wreck.setPosition(x, y + bob);
-        wreck.setRotation(rotation);
-
-        wreck.draw(batch);
-
-        wreck.setRotation(0f);
-        wreck.setPosition(x, y);
-    }
-
     private void drawCloud() {
 
         // מרכז המסך בעולם (ולא הספינה ישירות)
@@ -522,14 +556,34 @@ public class MainScreen implements Screen {
 
     @Override
     public void dispose() {
-        batch.dispose();
-        background.getTexture().dispose();
-        mainShip.getTexture().dispose();
-        wreck.getTexture().dispose();
-        cloud.getTexture().dispose();
-        uiStage.dispose();
-        skin.dispose();
+
+        if (batch != null) batch.dispose();
+
+        if (background != null && background.getTexture() != null)
+            background.getTexture().dispose();
+
+        if (mainShip != null && mainShip.getTexture() != null)
+            mainShip.getTexture().dispose();
+
+        if (cloud != null && cloud.getTexture() != null)
+            cloud.getTexture().dispose();
+
+        if (wreckSprite != null && wreckSprite.getTexture() != null)
+            wreckSprite.getTexture().dispose();
+
+        if (rippleTexture != null)
+            rippleTexture.dispose();
+
+        if (strokesTex != null)
+            strokesTex.dispose();
+
+        if (uiStage != null)
+            uiStage.dispose();
+
+        if (skin != null)
+            skin.dispose();
     }
+
 }
 
 

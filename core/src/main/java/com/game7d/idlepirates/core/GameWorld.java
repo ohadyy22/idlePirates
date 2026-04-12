@@ -1,64 +1,94 @@
 package com.game7d.idlepirates.core;
 
 import com.badlogic.gdx.math.Vector2;
+import com.game7d.idlepirates.data.WreckCatalog;
 import com.game7d.idlepirates.data.WreckDefinition;
-import com.game7d.idlepirates.entities.*;
-import com.game7d.idlepirates.systems.*;
+import com.game7d.idlepirates.entities.MainShip;
+import com.game7d.idlepirates.entities.Wreck;
+import com.game7d.idlepirates.systems.BoatSystem;
+import com.game7d.idlepirates.systems.WorkshopSystem;
 import com.game7d.idlepirates.upgrades.UpgradeSystem;
+import com.game7d.idlepirates.data.ResourceType;
+import com.game7d.idlepirates.data.CraftedItem;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 
+/**
+ * GameWorld
+ *
+ * מחזיק את כל מצב המשחק הלוגי:
+ * - ישויות (Wreck, MainShip)
+ * - מערכות (BoatSystem, WorkshopSystem, UpgradeSystem)
+ *
+ * אין כאן:
+ * - UI
+ * - Rendering
+ * - Input
+ */
 public class GameWorld {
 
-    public MainShip mainShip;
+    public final MainShip mainShip;
 
-    public List<Wreck> wrecks = new ArrayList<>();
-    public List<CrewAssignment> crews = new ArrayList<>();
+    /** מופעי ספינות טרופות בעולם */
+    public final List<Wreck> wrecks = new ArrayList<>();
 
-    public BoatSystem boatSystem;
-    public WorkshopSystem workshopSystem;
-    public UpgradeSystem upgradeSystem;
-    public MapSystem mapSystem;
+    /** בנקים משותפים */
+    public final EnumMap<ResourceType, Integer> resourceBank =
+        new EnumMap<>(ResourceType.class);
 
-    public List<WreckDefinition> wreckDefinitions = new ArrayList<>();
+    public final EnumMap<CraftedItem, Integer> craftedInventory =
+        new EnumMap<>(CraftedItem.class);
+
+    /** מערכות */
+    public final BoatSystem boatSystem;
+    public final WorkshopSystem workshopSystem;
+    public final UpgradeSystem upgradeSystem;
 
     public GameWorld(MainShip mainShip) {
         this.mainShip = mainShip;
 
-        this.boatSystem = new BoatSystem(mainShip, crews);
-        this.mapSystem = new MapSystem(mainShip, wreckDefinitions, wrecks);
+        // יצירת מופעי Wreck מהקטלוג
+        initWrecksFromCatalog();
 
-        initWreckDefinitions();
+        // מערכות
+        this.boatSystem = new BoatSystem(mainShip, wrecks);
+        this.workshopSystem = new WorkshopSystem(mainShip);
+        this.upgradeSystem = new UpgradeSystem(resourceBank, craftedInventory);
     }
 
-    private void initWreckDefinitions() {
-        wreckDefinitions.add(new WreckDefinition(
-            new Vector2(120, 80),
-            180f
-        ));
+    /** יצירת כל ה-Wrecks בעולם מהקטלוג */
+    private void initWrecksFromCatalog() {
 
-        wreckDefinitions.add(new WreckDefinition(
-            new Vector2(-200, 150),
-            260f
-        ));
+        List<WreckDefinition> defs =
+            WreckCatalog.createAllDefinitions();
 
-        wreckDefinitions.add(new WreckDefinition(
-            new Vector2(350, -120),
-            420f
-        ));
+        // מיקומים דוגמה (בהמשך יבואו מ-Save / MapGen)
+        wrecks.add(new Wreck(defs.get(0),
+            new Vector2(120, 80)));
+
+        wrecks.add(new Wreck(defs.get(1),
+            new Vector2(-200, 150)));
+
+        wrecks.add(new Wreck(defs.get(2),
+            new Vector2(350, -120)));
+
+        wrecks.add(new Wreck(defs.get(3),
+            new Vector2(-420, -260)));
     }
 
+    /** עדכון לוגי של העולם */
     public void update(float delta) {
-        mapSystem.update();
 
-        for (Wreck w : wrecks) {
-            w.update(delta);
+        for (Wreck wreck : wrecks) {
+            wreck.update(delta);
         }
 
         boatSystem.update(delta);
+        workshopSystem.update(delta);
+        upgradeSystem.update(delta);
     }
 }
-
 
 

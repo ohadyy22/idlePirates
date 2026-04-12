@@ -1,72 +1,68 @@
 package com.game7d.idlepirates.data;
 
-
-import com.badlogic.gdx.math.Vector2;
 import java.util.ArrayList;
 import java.util.List;
 
-
 /**
- * קטלוג ספינות טרופות התחלתיות.
- * משתמש אך ורק בבנאי המקורי של WreckDefinition.
+ * קטלוג של כל סוגי הספינות במשחק.
+ * - מקור אמת יחיד לתוכן
+ * - לא יודע כלום על מיקום או world
  */
 public class WreckCatalog {
 
+    public static List<WreckDefinition> createAllDefinitions() {
 
-    public static List<WreckDefinition> createInitialWrecks(float centerX, float centerY) {
+        List<WreckDefinition> defs = new ArrayList<>();
 
-
-        List<WreckDefinition> wrecks = new ArrayList<>();
-
-
-        // ========= ספינה 1 – חינמית =========
-        WreckDefinition w1 = new WreckDefinition(
-            new Vector2(centerX + 220, centerY),
-            50f
+        // ===== ספינה 1 – חינמית =====
+        WreckDefinition wood = new WreckDefinition(
+            "WOOD_WRECK",
+            0,      	// crewCost
+            0f,     	// requiredVision
+            5f,     	// production time
+            5       	// cargo
         );
-        w1.setCrewCost(0);
-        w1.addProduction(ResourceType.WOOD, 100);
-        wrecks.add(w1);
+        wood.addProduction(ResourceType.WOOD, 100);
+        defs.add(wood);
 
-
-        // ========= ספינה 2 – 750 =========
-        WreckDefinition w2 = new WreckDefinition(
-            new Vector2(centerX - 300, centerY + 160),
-            90f
+        // ===== ספינה 2 =====
+        WreckDefinition rope = new WreckDefinition(
+            "ROPE_WRECK",
+            300,
+            80f,
+            6f,
+            6
         );
-        w2.setCrewCost(750);
-        w2.addProduction(ResourceType.WOOD, 70);
-        w2.addProduction(ResourceType.ROPE, 30);
-        wrecks.add(w2);
+        rope.addProduction(ResourceType.WOOD, 60);
+        rope.addProduction(ResourceType.ROPE, 40);
+        defs.add(rope);
 
-
-        // ========= ספינה 3 – 1300 =========
-        WreckDefinition w3 = new WreckDefinition(
-            new Vector2(centerX, centerY - 280),
-            130f
+        // ===== ספינה 3 =====
+        WreckDefinition iron = new WreckDefinition(
+            "IRON_WRECK",
+            600,
+            120f,
+            7f,
+            8
         );
-        w3.setCrewCost(1300);
-        w3.addProduction(ResourceType.WOOD, 40);
-        w3.addProduction(ResourceType.ROPE, 40);
-        w3.addProduction(ResourceType.IRON, 20);
-        wrecks.add(w3);
+        iron.addProduction(ResourceType.IRON, 100);
+        defs.add(iron);
 
-
-        // ========= ספינה 4 – 2400 (מדורג והגיוני) =========
-        WreckDefinition w4 = new WreckDefinition(
-            new Vector2(centerX + 420, centerY - 220),
-            180f
+        // ===== ספינה 4 =====
+        WreckDefinition mixed = new WreckDefinition(
+            "MIXED_WRECK",
+            1000,
+            200f,
+            8f,
+            10
         );
-        w4.setCrewCost(2400);
-        w4.addProduction(ResourceType.WOOD, 25);
-        w4.addProduction(ResourceType.ROPE, 45);
-        w4.addProduction(ResourceType.IRON, 30);
-        wrecks.add(w4);
+        mixed.addProduction(ResourceType.WOOD, 40);
+        mixed.addProduction(ResourceType.ROPE, 40);
+        mixed.addProduction(ResourceType.IRON, 20);
+        defs.add(mixed);
 
-
-        return wrecks;
+        return defs;
     }
 }
-
 
 

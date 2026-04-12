@@ -11,20 +11,18 @@ import java.util.Set;
 /**
  * אחראי על רכישת שדרוגים.
  *
- * תפקידים:
- * - בדיקת דרישות (Raw + Crafted)
- * - צריכת משאבים
- * - מניעת רכישה כפולה
- * - הענקת XP להתקדמות
+ * ✔ בודק דרישות
+ * ✔ צורך משאבים
+ * ✔ מונע רכישה כפולה
+ * ✔ מחזיק XP
  *
- * לא מצייר UI.
- * לא קובע מחירים.
- * לא קשור ל-Market או Workshop ישירות.
+ * ❌ לא מצייר UI
+ * ❌ לא מיישם אפקטים ישירות
  */
 public class UpgradeSystem {
 
     // =========================
-    // External dependencies
+    // External state
     // =========================
     private final EnumMap<ResourceType, Integer> resourceBank;
     private final EnumMap<CraftedItem, Integer> craftedInventory;
@@ -33,7 +31,6 @@ public class UpgradeSystem {
     // Internal state
     // =========================
     private final Set<String> purchasedUpgrades = new HashSet<>();
-
     private int playerXP = 0;
 
     public UpgradeSystem(
@@ -48,16 +45,12 @@ public class UpgradeSystem {
     // Public API
     // =========================
 
-    /**
-     * בדיקה האם שדרוג כבר נרכש
-     */
+    /** האם שדרוג כבר נרכש */
     public boolean isPurchased(String upgradeId) {
         return purchasedUpgrades.contains(upgradeId);
     }
 
-    /**
-     * בדיקה האם ניתן לרכוש שדרוג כרגע
-     */
+    /** בדיקה האם אפשר לרכוש שדרוג */
     public boolean canPurchase(UpgradeDefinition upgrade) {
 
         if (isPurchased(upgrade.id)) {
@@ -87,9 +80,7 @@ public class UpgradeSystem {
         return true;
     }
 
-    /**
-     * רכישת שדרוג בפועל
-     */
+    /** רכישת שדרוג בפועל */
     public boolean purchase(UpgradeDefinition upgrade) {
 
         if (!canPurchase(upgrade)) {
@@ -100,12 +91,9 @@ public class UpgradeSystem {
         for (Map.Entry<ResourceType, Integer> entry :
             upgrade.requiredResources.entrySet()) {
 
-            ResourceType type = entry.getKey();
-            int cost = entry.getValue();
-
             resourceBank.put(
-                type,
-                resourceBank.get(type) - cost
+                entry.getKey(),
+                resourceBank.get(entry.getKey()) - entry.getValue()
             );
         }
 
@@ -113,22 +101,15 @@ public class UpgradeSystem {
         for (Map.Entry<CraftedItem, Integer> entry :
             upgrade.requiredCraftedItems.entrySet()) {
 
-            CraftedItem item = entry.getKey();
-            int cost = entry.getValue();
-
             craftedInventory.put(
-                item,
-                craftedInventory.get(item) - cost
+                entry.getKey(),
+                craftedInventory.get(entry.getKey()) - entry.getValue()
             );
         }
 
-        // סימון כשדרוג שנרכש
         purchasedUpgrades.add(upgrade.id);
-
-        // הענקת XP (רק כאן!)
         playerXP += upgrade.xpReward;
 
-        // אפקטים בפועל יוחלו דרך מערכת אחרת (Stats / Modifiers)
         return true;
     }
 
@@ -138,6 +119,10 @@ public class UpgradeSystem {
 
     public int getPlayerXP() {
         return playerXP;
+    }
+
+    /** כרגע אין לוגיקת זמן – נשאר כאן להרחבות עתידיות */
+    public void update(float delta) {
     }
 }
 
