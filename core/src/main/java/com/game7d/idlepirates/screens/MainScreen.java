@@ -315,6 +315,7 @@ public class MainScreen implements Screen {
             new GestureDetector.GestureAdapter() {
 
                 private float startZoom;
+                private final Vector3 pinchWorldPos = new Vector3();
 
                 @Override
                 public boolean touchDown(float x, float y, int pointer, int button) {
@@ -338,11 +339,42 @@ public class MainScreen implements Screen {
                     if (initialDistance == 0) return false;
 
                     float ratio = initialDistance / currentDistance;
-                    camera.zoom = MathUtils.clamp(startZoom * ratio, MIN_ZOOM, MAX_ZOOM);
+                    float newZoom = MathUtils.clamp(
+                        startZoom * ratio,
+                        MIN_ZOOM,
+                        MAX_ZOOM
+                    );
 
-                    clampCamera();
+                    // =========================
+                    // 2️⃣ נקודת הצביטה במסך (אמצע שתי האצבעות)
+                    // =========================
+                    float midX = (pointer1.x + pointer2.x) * 0.5f;
+                    float midY = (pointer1.y + pointer2.y) * 0.5f;
+
+                    // =========================
+                    // 3️⃣ Screen → World (עם viewport!)
+                    // =========================
+                    pinchWorldPos.set(midX, midY, 0);
+                    viewport.unproject(pinchWorldPos);
+
+                    // =========================
+                    // 4️⃣ פיצוי מיקום המצלמה
+                    // =========================
+                    float prevZoom = camera.zoom;
+                    camera.zoom = newZoom;
+
+                    float zoomFactor = newZoom / prevZoom;
+
+                    camera.position.x +=
+                        (pinchWorldPos.x - camera.position.x) * (1 - zoomFactor);
+                    camera.position.y +=
+                        (pinchWorldPos.y - camera.position.y) * (1 - zoomFactor);
+
+                    clampCamera();   // אם יש לך גבולות עולם
                     camera.update();
+
                     return true;
+
                 }
 
                 // =========================
