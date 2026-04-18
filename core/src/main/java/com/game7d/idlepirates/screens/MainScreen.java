@@ -32,7 +32,9 @@ import com.game7d.idlepirates.data.CraftedItem;
 import com.game7d.idlepirates.data.ResourceType;
 import com.game7d.idlepirates.data.WreckCatalog;
 import com.game7d.idlepirates.data.WreckDefinition;
+import com.game7d.idlepirates.entities.CrewAssignment;
 import com.game7d.idlepirates.entities.MainShip;
+import com.game7d.idlepirates.entities.SmallBoat;
 import com.game7d.idlepirates.entities.Wreck;
 import com.game7d.idlepirates.market.MarketSystem;
 import com.game7d.idlepirates.progress.ResourceDiscovery;
@@ -76,6 +78,10 @@ public class MainScreen implements Screen {
     // Wreck – מאוזנת (רחבה)
     private Sprite wreckSprite;
 
+
+    //small boat
+    private Sprite smallBoatEmptySprite;
+    private Sprite smallBoatFullSprite;
 
     // =========================
     // STATE
@@ -124,6 +130,8 @@ public class MainScreen implements Screen {
 
 
 
+
+
     @Override
     public void show() {
 
@@ -144,6 +152,39 @@ public class MainScreen implements Screen {
         // =========================
         mainShipPos = new Vector2(WORLD_SIZE / 2f, WORLD_SIZE / 2f);
         mainShip = new MainShip(mainShipPos);
+
+        //samll boat
+
+        Texture smallBoatEmptyTex =
+            new Texture(Gdx.files.internal("small_boat_empty.png"));
+        smallBoatEmptyTex.setFilter(
+            Texture.TextureFilter.Linear,
+            Texture.TextureFilter.Linear
+        );
+
+        smallBoatEmptySprite = new Sprite(smallBoatEmptyTex);
+        smallBoatEmptySprite.setSize(36f, 36f);
+        smallBoatEmptySprite.setOriginCenter();
+        smallBoatEmptySprite.setScale(-1f,1f);
+
+        Texture smallBoatFullTex =
+            new Texture(Gdx.files.internal("small_boat_full.png"));
+        smallBoatFullTex.setFilter(
+            Texture.TextureFilter.Linear,
+            Texture.TextureFilter.Linear
+        );
+
+        smallBoatFullSprite = new Sprite(smallBoatFullTex);
+        smallBoatFullSprite.setSize(36f, 36f);
+        smallBoatFullSprite.setOriginCenter();
+        smallBoatFullSprite.setScale(-1f,1f);
+
+
+
+
+
+
+
 
         // =========================
         // GAME WORLD (LOGIC ONLY)
@@ -602,6 +643,55 @@ public class MainScreen implements Screen {
             wreckSprite.draw(batch);
             wreckSprite.setRotation(0f);
         }
+        // =========================
+        // SMALL BOATS (visual)
+        // =========================
+        for (CrewAssignment crew : gameWorld.boatSystem.getCrews()) {
+
+            SmallBoat boat = crew.boat;
+            if (boat == null) continue;
+
+            Sprite spriteToDraw;
+
+            float fromX, fromY, toX, toY;
+
+            if (crew.state == CrewAssignment.State.RETURNING) {
+                // חוזרת – מלאה
+                spriteToDraw = smallBoatFullSprite;
+
+                fromX = crew.wreck.position.x;
+                fromY = crew.wreck.position.y;
+                toX   = gameWorld.mainShip.position.x;
+                toY   = gameWorld.mainShip.position.y;
+
+            } else {
+                // הולכת – ריקה
+                spriteToDraw = smallBoatEmptySprite;
+
+                fromX = gameWorld.mainShip.position.x;
+                fromY = gameWorld.mainShip.position.y;
+                toX   = crew.wreck.position.x;
+                toY   = crew.wreck.position.y;
+            }
+
+            // ✅ חישוב זווית
+            float angle = MathUtils.atan2(
+                toY - fromY,
+                toX - fromX
+            ) * MathUtils.radiansToDegrees;
+
+            spriteToDraw.setOriginCenter();
+            spriteToDraw.setRotation(angle);
+
+            spriteToDraw.setCenter(boat.x, boat.y);
+            spriteToDraw.draw(batch);
+        }
+
+
+
+
+
+
 
         // --- Cloud תמיד אחרון בעולם ---
         drawCloud();

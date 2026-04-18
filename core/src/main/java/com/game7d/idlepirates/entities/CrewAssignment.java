@@ -9,13 +9,11 @@ public class CrewAssignment {
     }
 
     public final Wreck wreck;
-    public final SmallBoat boat;
-
+    public SmallBoat boat;
     public State state = State.TO_WRECK;
 
-    public CrewAssignment(Wreck wreck, float boatSpeed, int cargoCapacity) {
+    public CrewAssignment(Wreck wreck) {
         this.wreck = wreck;
-        this.boat = new SmallBoat(boatSpeed, cargoCapacity);
     }
 }
 

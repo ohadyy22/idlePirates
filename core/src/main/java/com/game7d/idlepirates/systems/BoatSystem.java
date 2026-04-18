@@ -1,6 +1,5 @@
 package com.game7d.idlepirates.systems;
 
-import com.badlogic.gdx.math.Vector2;
 import com.game7d.idlepirates.entities.*;
 import com.game7d.idlepirates.data.ResourceType;
 
@@ -11,29 +10,28 @@ public class BoatSystem {
 
     private final MainShip mainShip;
     private final List<Wreck> wrecks;
-
     private final List<CrewAssignment> crews = new ArrayList<>();
 
-    // ערכי בסיס – בהמשך יבואו משדרוגים
-    private static final float BASE_BOAT_SPEED = 100f;   // units/sec
-    private static final int   BASE_CARGO  	= 10;
+    private static final float BASE_BOAT_SPEED = 150f;
+    private static final int BASE_CARGO = 10;
 
     public BoatSystem(MainShip mainShip, List<Wreck> wrecks) {
         this.mainShip = mainShip;
         this.wrecks = wrecks;
     }
 
+    public List<CrewAssignment> getCrews() {
+        return crews;
+    }
+
     public void update(float delta) {
 
-        // ודא שלכל Wreck עם צוות יש CrewAssignment
+        // יצירת צוות חדש
         for (Wreck wreck : wrecks) {
             if (wreck.hasCrew && !hasCrewAssigned(wreck)) {
-                crews.add(new CrewAssignment(
-                    wreck,
-                    BASE_BOAT_SPEED,
-                    BASE_CARGO
-                ));
-                startToWreck(crews.get(crews.size() - 1));
+                CrewAssignment crew = new CrewAssignment(wreck);
+                startToWreck(crew);
+                crews.add(crew);
             }
         }
 
@@ -43,29 +41,27 @@ public class BoatSystem {
     }
 
     private boolean hasCrewAssigned(Wreck wreck) {
-        for (CrewAssignment crew : crews) {
-            if (crew.wreck == wreck) {
-                return true;
-            }
-        }
+        for (CrewAssignment crew : crews)
+            if (crew.wreck == wreck) return true;
         return false;
     }
 
     private void updateCrew(CrewAssignment crew, float delta) {
 
+        if (crew.boat == null) return;
+
+        if (!crew.boat.updateMovement(delta))
+            return;
+
         switch (crew.state) {
 
             case TO_WRECK:
-                if (crew.boat.updateMovement(delta)) {
-                    collect(crew.boat, crew.wreck);
-                    startReturn(crew);
-                }
+                collect(crew.boat, crew.wreck);
+                startReturn(crew);
                 break;
 
             case RETURNING:
-                if (crew.boat.updateMovement(delta)) {
-                    crew.state = CrewAssignment.State.UNLOADING;
-                }
+                crew.state = CrewAssignment.State.UNLOADING;
                 break;
 
             case UNLOADING:
@@ -73,6 +69,34 @@ public class BoatSystem {
                 startToWreck(crew);
                 break;
         }
+    }
+
+    private void startToWreck(CrewAssignment crew) {
+
+        crew.boat = new SmallBoat(
+            BASE_BOAT_SPEED,
+            BASE_CARGO,
+            mainShip.position.x,
+            mainShip.position.y,
+            crew.wreck.position.x,
+            crew.wreck.position.y
+        );
+
+        crew.state = CrewAssignment.State.TO_WRECK;
+    }
+
+    private void startReturn(CrewAssignment crew) {
+
+        crew.boat = new SmallBoat(
+            BASE_BOAT_SPEED,
+            BASE_CARGO,
+            crew.wreck.position.x,
+            crew.wreck.position.y,
+            mainShip.position.x,
+            mainShip.position.y
+        );
+
+        crew.state = CrewAssignment.State.RETURNING;
     }
 
     private void collect(SmallBoat boat, Wreck wreck) {
@@ -102,32 +126,6 @@ public class BoatSystem {
             mainShip.addResource(type, boat.cargo.get(type));
         }
         boat.cargo.clear();
-    }
-
-    private void startToWreck(CrewAssignment crew) {
-
-        float distance = Vector2.dst(
-            mainShip.position.x,
-            mainShip.position.y,
-            crew.wreck.position.x,
-            crew.wreck.position.y
-        );
-
-        crew.boat.startJourney(distance);
-        crew.state = CrewAssignment.State.TO_WRECK;
-    }
-
-    private void startReturn(CrewAssignment crew) {
-
-        float distance = Vector2.dst(
-            crew.wreck.position.x,
-            crew.wreck.position.y,
-            mainShip.position.x,
-            mainShip.position.y
-        );
-
-        crew.boat.startJourney(distance);
-        crew.state = CrewAssignment.State.RETURNING;
     }
 }
 
