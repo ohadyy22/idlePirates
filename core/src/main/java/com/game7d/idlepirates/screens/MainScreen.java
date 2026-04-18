@@ -114,6 +114,11 @@ public class MainScreen implements Screen {
     private GestureDetector gestureDetector;
     private static final float MIN_ZOOM = 0.6f;  // זום פנימה מקסימלי
     private static final float MAX_ZOOM = 1.8f;  // זום החוצה מקסימלי
+    private static final float CLOUD_OFFSET_X = 80f;
+    private static final float CLOUD_OFFSET_Y = 80f;
+
+
+
 
 
 
@@ -681,16 +686,10 @@ public class MainScreen implements Screen {
 
     private void drawCloud() {
 
-        // מרכז המסך בעולם (ולא הספינה ישירות)
-        float focusX = camera.position.x;
-        float focusY = camera.position.y;
-
         float baseScale = visionRange / BASE_VISION;
 
         // אנימציות עדינות
         float pulse = MathUtils.sin(time * 0.35f) * 0.015f;
-        float driftX = MathUtils.sin(time * 0.18f) * 4f;
-        float driftY = MathUtils.cos(time * 0.14f) * 3f;
         float rotation = MathUtils.sin(time * 0.10f) * 0.4f;
 
         // אליפסה אנכית (מותאם למובייל)
@@ -701,9 +700,9 @@ public class MainScreen implements Screen {
         cloud.setScale(scaleX, scaleY);
         cloud.setRotation(rotation);
 
-        cloud.setPosition(
-            focusX - cloud.getWidth() / 2f + driftX,
-            focusY - cloud.getHeight() / 2f + driftY
+        cloud.setCenter(
+            mainShipSprite.getX() + CLOUD_OFFSET_X,
+            mainShipSprite.getY()+ CLOUD_OFFSET_Y
         );
 
         cloud.draw(batch);
