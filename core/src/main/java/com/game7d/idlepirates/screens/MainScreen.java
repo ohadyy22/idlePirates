@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
@@ -46,6 +47,8 @@ public class MainScreen implements Screen {
     // =========================
     // WORLD / VIEW
     // =========================
+    private static final float WORLD_WIDTH  = 4096f;
+    private static final float WORLD_HEIGHT = 4096f;
     private static final float WORLD_SIZE = 4096f;
     private static final float VIEWPORT_WIDTH  = 1080f;
     private static final float VIEWPORT_HEIGHT = 1920f;
@@ -108,6 +111,12 @@ public class MainScreen implements Screen {
     private GameWorld gameWorld;
     private MainShip mainShip;
     private ObjectMap<Wreck,Label> wreckCostLabels;
+    private GestureDetector gestureDetector;
+    private static final float MIN_ZOOM = 0.6f;  // זום פנימה מקסימלי
+    private static final float MAX_ZOOM = 1.8f;  // זום החוצה מקסימלי
+
+
+
 
 
     @Override
@@ -295,23 +304,80 @@ public class MainScreen implements Screen {
         // =========================
         // INPUT
         // =========================
+
+
+        gestureDetector = new GestureDetector(
+            new GestureDetector.GestureAdapter() {
+
+                private float startZoom;
+
+                @Override
+                public boolean touchDown(float x, float y, int pointer, int button) {
+                    startZoom = camera.zoom;
+                    return false;
+                }
+
+                // =========================
+                // PINCH TO ZOOM
+                // =========================
+                @Override
+                public boolean pinch(
+                    Vector2 initialPointer1,
+                    Vector2 initialPointer2,
+                    Vector2 pointer1,
+                    Vector2 pointer2) {
+
+                    float initialDistance = initialPointer1.dst(initialPointer2);
+                    float currentDistance = pointer1.dst(pointer2);
+
+                    if (initialDistance == 0) return false;
+
+                    float ratio = initialDistance / currentDistance;
+                    camera.zoom = MathUtils.clamp(startZoom * ratio, MIN_ZOOM, MAX_ZOOM);
+
+                    clampCamera();
+                    camera.update();
+                    return true;
+                }
+
+                // =========================
+                // PAN (DRAG)
+                // =========================
+                @Override
+                public boolean pan(float x, float y, float deltaX, float deltaY) {
+
+                    // deltaX / deltaY הם במסך – מתאימים לזום
+                    float panSpeed = camera.zoom;
+
+                    camera.position.x -= deltaX * panSpeed;
+                    camera.position.y += deltaY * panSpeed;
+
+                    clampCamera();
+                    camera.update();
+                    return true;
+                }
+            }
+        );
+
+
+
         InputMultiplexer mux = new InputMultiplexer();
         mux.addProcessor(uiStage);
+        mux.addProcessor(gestureDetector);
         mux.addProcessor(new InputAdapter() {
-
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-
                 Vector3 worldPos = new Vector3(screenX, screenY, 0);
-
-                // ⭐ ההבדל הקריטי ⭐
                 viewport.unproject(worldPos);
-
                 return handleWreckClick(worldPos.x, worldPos.y);
             }
-
-
-
+            @Override
+            public boolean scrolled(float amountX, float amountY) {
+                camera.zoom += amountY * 0.1f;
+                camera.zoom = MathUtils.clamp(camera.zoom, MIN_ZOOM, MAX_ZOOM);
+                camera.update();
+                return true;
+            }
         });
 
         Gdx.input.setInputProcessor(mux);
@@ -319,6 +385,27 @@ public class MainScreen implements Screen {
 
 
     }
+
+    private void clampCamera() {
+
+        float halfViewWidth =
+            (viewport.getWorldWidth() * camera.zoom) / 2f;
+        float halfViewHeight =
+            (viewport.getWorldHeight() * camera.zoom) / 2f;
+
+        camera.position.x = MathUtils.clamp(
+            camera.position.x,
+            halfViewWidth,
+            WORLD_WIDTH - halfViewWidth
+        );
+
+        camera.position.y = MathUtils.clamp(
+            camera.position.y,
+            halfViewHeight,
+            WORLD_HEIGHT - halfViewHeight
+        );
+    }
+
 
 
 
