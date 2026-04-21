@@ -12,15 +12,19 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
@@ -94,6 +98,7 @@ public class MainScreen implements Screen {
     // --- UI ---
     private Stage uiStage;
     private Skin skin;
+    private Table bottomBar;
 
     // --- Market ---
     private MarketSystem marketSystem;
@@ -284,6 +289,89 @@ public class MainScreen implements Screen {
         // =========================
         uiStage = new Stage(new ScreenViewport());
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
+
+        // =========================
+        // ROOT UI TABLE
+        // =========================
+        Table uiRoot = new Table();
+        uiRoot.setFillParent(true);
+        uiStage.addActor(uiRoot);
+        // =========================
+        // BOTTOM WOOD BOARD
+        // =========================
+        Texture woodBoardTex = new Texture(Gdx.files.internal("wood_board.png"));
+        woodBoardTex.setFilter(
+            Texture.TextureFilter.Linear,
+            Texture.TextureFilter.Linear
+        );
+
+        Drawable woodBoardDrawable = new TextureRegionDrawable(
+            new TextureRegion(woodBoardTex)
+        );
+
+        bottomBar = new Table();
+        bottomBar.setBackground(woodBoardDrawable);
+        bottomBar.pad(20f);
+
+        float bottomBarHeight = uiStage.getViewport().getWorldHeight() * 0.12f;
+        uiRoot.bottom();
+        uiRoot.add(bottomBar).growX().height(bottomBarHeight);
+
+// =========================
+// SINGLE ROW BUTTON BAR
+// =========================
+
+        int buttons = 6;
+
+// padding פנימי בלוח
+        float sidePadding = 20f;
+        float buttonSpacing = 10f;
+
+// רוחב הלוח הזמין לכפתורים
+        float barWidth = uiStage.getViewport().getWorldWidth()
+            - (sidePadding * 2);
+
+// רוחב כפתור מחושב
+        float buttonWidth =
+            (barWidth - (buttonSpacing * (buttons - 1))) / buttons;
+
+// מגבלת בטיחות (לא ענק במחשב)
+        buttonWidth = Math.min(buttonWidth, 120f);
+
+// גובה כפתור לפי גובה הלוח
+        float buttonHeight = bottomBarHeight * 0.6f;
+
+        bottomBar.clear();
+        bottomBar.pad(sidePadding);
+
+        for (int i = 0; i < buttons; i++) {
+
+            Texture iconTex =
+                new Texture(Gdx.files.internal("icon_" + i + ".png"));
+            iconTex.setFilter(
+                Texture.TextureFilter.Linear,
+                Texture.TextureFilter.Linear
+            );
+
+            ImageButton.ImageButtonStyle style =
+                new ImageButton.ImageButtonStyle();
+            style.imageUp =
+                new TextureRegionDrawable(new TextureRegion(iconTex));
+
+            ImageButton button = new ImageButton(style);
+
+            bottomBar.add(button)
+                .size(buttonWidth, buttonHeight);
+
+            if (i < buttons - 1) {
+                bottomBar.add().width(buttonSpacing);
+            }
+        }
+
+
+
+
+
 
         // =========================
         // ECONOMY SYSTEMS
